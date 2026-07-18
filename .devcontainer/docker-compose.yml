@@ -1,0 +1,47 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ..:/workspace:cached
+    command: sleep infinity
+    environment:
+      DB_USER: cyberstars
+      DB_HOST: db
+      DB_NAME: cyberstars
+      DB_PASSWORD: cyberstars
+      DB_PORT: 5432
+      DATABASE_URL: postgresql://cyberstars:cyberstars@db:5432/cyberstars
+      JWT_SECRET: dev-only-insecure-secret
+      NODE_ENV: development
+      CORS_DEV_ORIGIN: http://localhost:5173
+      # v86 (https://github.com/copy/v86) runs entirely client-side in the browser
+      # (WASM + Web Workers) — it needs no server/container support, just static
+      # assets served over the Vite dev server and the port forwarded below.
+      #
+      # Deliberately out of scope here: the Docker-in-Docker sandbox used in prod
+      # (docker-compose.yml at repo root) for editor code execution and the Linux
+      # terminal course. Those runtimes won't work inside this devcontainer.
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    # Fully-qualified so rootless Podman doesn't prompt for a registry.
+    image: docker.io/library/postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cyberstars
+      POSTGRES_PASSWORD: cyberstars
+      POSTGRES_DB: cyberstars
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U cyberstars -d cyberstars']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pgdata:
